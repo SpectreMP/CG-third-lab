@@ -2,6 +2,7 @@
 #include <gl/gl.h>
 #include <math.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 LRESULT CALLBACK WindowProc(HWND, UINT, WPARAM, LPARAM);
 void EnableOpenGL(HWND hwnd, HDC*, HGLRC*);
@@ -9,7 +10,7 @@ void DisableOpenGL(HWND, HDC, HGLRC);
 int ADD_FRAMETIME = 0;
 
 POINTFLOAT cameraPos = {0,0};
-float lightPosition[] = {1, 1, 5, 1};
+float lightPosition[] = {1, 1, 3, 1};
 
 float xAlpha = 60;
 float zAlpha = 45;
@@ -156,13 +157,119 @@ void drawCube(){
     };
     glColor3f(1, 0.3, 0.3);
     glEnableClientState(GL_VERTEX_ARRAY);
-    glVertexPointer(3, GL_FLOAT, 0, vertices);
     glEnableClientState(GL_NORMAL_ARRAY);
+    glVertexPointer(3, GL_FLOAT, 0, vertices);
     glNormalPointer(GL_FLOAT, 0, normals);
-    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, indices);
+    glDrawElements(GL_TRIANGLES, 9*sizeof(unsigned int), GL_UNSIGNED_INT, indices);
     glDisableClientState(GL_VERTEX_ARRAY);
     glDisableClientState(GL_NORMAL_ARRAY);
 }
+
+void drawPrism(int vertAmount, float topModifier, float bottomMofidier)
+{
+    float vertices[vertAmount * 2 * 3 + 2 * 3];
+    unsigned int indices[vertAmount * 4 * 3];
+
+    float angle = 2 * M_PI / vertAmount;
+
+    //ВНИМАНИЕ! Я СОВЕРШАЮ ВОЕННОЕ ПРЕСТУПЛЕНИЕ, РАСЧИТЫВАЯ ВЕРШИНЫ ФИГУРЫ КАЖДЫЙ КАДР, ВМЕСТО ТОГО ЧТОБЫ ВЫНЕСТИ РАСЧЁТЫ ВНЕ ЦИКЛА.
+    //НИ В КОЕМ СЛУЧАЕ НЕ ПОВТОРЯТЬ ДОМА, ТРЮК ВЫПОЛНЕН ЧЕЛОВЕКОМ, КОТОРЫЙ ДЕЛАЕТ ЭТУ ЛАБУ В 4:08 И НЕ СОБИРАЕТСЯ СПАТЬ ЧТОБЫ СДАТЬ ЕЁ В СРОК
+
+    //Я даже объяснять не стану как это работает
+
+    //Определяем вершины
+
+
+    for (int vert = 0; vert < vertAmount; vert++) //Нижний круг вершин
+    {
+        vertices[vert*3]     = cos(angle * vert) * bottomMofidier;
+        vertices[vert*3 + 1] = sin(angle * vert) * bottomMofidier;
+        vertices[vert*3 + 2] = 0;
+
+    }
+
+    for (int vert = vertAmount; vert < vertAmount * 2; vert++) //Верхний круг вершин
+    {
+        vertices[vert*3]     = cos(angle * vert) * topModifier;
+        vertices[vert*3 + 1] = sin(angle * vert) * topModifier;
+        vertices[vert*3 + 2] = 1;
+
+    }
+
+    // Верхний и нижний центры.
+    vertices[vertAmount * 2 * 3]     = 0;
+    vertices[vertAmount * 2 * 3 + 1] = 0;
+    vertices[vertAmount * 2 * 3 + 2] = 0;
+    vertices[vertAmount * 2 * 3 + 3] = 0;
+    vertices[vertAmount * 2 * 3 + 4] = 0;
+    vertices[vertAmount * 2 * 3 + 5] = 1;
+
+    //Определяем смещения(?)
+    //Смещения сторон
+    for (int side = 0; side < vertAmount; side++)
+    {
+
+        indices[6 * side] = side;
+        indices[6 * side + 1] = side + 1;
+        indices[6 * side + 2] = vertAmount + side;
+
+        indices[6 * side + 3] = side + 1;
+        indices[6 * side + 4] = vertAmount + side;
+        indices[6 * side + 5] = vertAmount+ side + 1;
+
+        if (side+1 == vertAmount)
+        {
+            indices[6 * side + 1] = 0;
+            indices[6 * side + 5] = 0;
+        }
+    }
+
+    //Смещения торцов
+    for (int side = 0; side < vertAmount; side++)
+    {
+        indices[6 * side + vertAmount * 6] = side;
+        indices[6 * side + 1 + vertAmount * 6] = side + 1;
+        indices[6 * side + 2 + vertAmount * 6] = vertAmount * 2;
+
+        indices[6 * side + 3 + vertAmount * 6] = side + vertAmount;
+        indices[6 * side + 4 + vertAmount * 6] = side + vertAmount + 1;
+        indices[6 * side + 5 + vertAmount * 6] = vertAmount * 2 + 1;
+
+        if (side+1 == vertAmount)
+        {
+            indices[6 * side + 1 + vertAmount * 6] = 0;
+            indices[6 * side + 4 + vertAmount * 6] = vertAmount;
+        }
+    }
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_NORMAL_ARRAY);
+
+    glVertexPointer(3, GL_FLOAT, 0, vertices);
+    glNormalPointer(GL_FLOAT, 0, vertices);
+    glDrawElements(GL_TRIANGLES, vertAmount * 3 * sizeof(unsigned int) , GL_UNSIGNED_INT, indices);
+
+    glDisableClientState(GL_NORMAL_ARRAY);
+    glDisableClientState(GL_VERTEX_ARRAY);
+}
+
+void drawHourglass(int vertAmount, float topModifier, float bottomMofidier)
+{
+    glPushMatrix();
+
+        glScalef(1, 1, 1);
+        drawPrism(vertAmount, topModifier, bottomMofidier);
+
+    glPopMatrix();
+    glPushMatrix();
+
+        glScalef(1, 1, 1);
+        glTranslatef(0, 0, 1);
+        drawPrism(vertAmount, bottomMofidier, topModifier);
+
+    glPopMatrix();
+}
+
 
 int WINAPI WinMain(HINSTANCE hInstance,
                    HINSTANCE hPrevInstance,
@@ -214,6 +321,8 @@ int WINAPI WinMain(HINSTANCE hInstance,
     /* enable OpenGL for the window */
     EnableOpenGL(hwnd, &hDC, &hRC);
 
+
+
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glFrustum(-1, 1, -1, 1, 1, 80);
@@ -227,7 +336,12 @@ int WINAPI WinMain(HINSTANCE hInstance,
     glEnable(GL_LIGHT0);
     glEnable(GL_COLOR_MATERIAL);
     glEnable(GL_NORMALIZE);
+
     glShadeModel(GL_SMOOTH);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 
     float light_ambient[] = { 0.1f, 0.1f, 0.1f, 1.0f };
     float light_diffuse[] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -272,36 +386,36 @@ int WINAPI WinMain(HINSTANCE hInstance,
 
                 drawChessBoard(8);
 
-                glPushMatrix(); //Куб посередине
-
-                    glScalef(2, 2, 2);
+                glPushMatrix(); //Малый куб
+                    glScalef(1, 1, 1);
                     glTranslatef(0, 0, 0.5);
                     drawCube();
-
                 glPopMatrix();
 
-                glPushMatrix(); //Малый куб
-
-                    glScalef(1, 1, 1);
-                    glTranslatef(2, 2, 0.5);
-                    drawCube();
-
+                glPushMatrix(); //Непрозрачная фигура
+                    glTranslatef(0.0f, 5.0f, 0.0f);
+                    glColor4f(1.0f, 0.2f, 0.2f, 1.0f);
+                    drawHourglass(7, 0.4f, 1.0f);
                 glPopMatrix();
 
-                glPushMatrix(); //Большой куб
+                glPushMatrix(); //Полупрозрачная фигура
+                    glTranslatef(3.66f, -2.5f, 0.0f);
+                    glColor4f(1.0f, 0.2f, 0.2f, 0.6f);
+                    drawHourglass(7, 0.4f, 1.0f);
+                glPopMatrix();
 
-                    glScalef(3, 3, 3);
-                    glTranslatef(-1, -1, 0.5);
-                    drawCube();
-
+                glPushMatrix(); //Прозрачная фигура
+                    glTranslatef(-3.66f, -2.5f, 0.0f);
+                    glColor4f(1.0f, 0.2f, 0.2f, 0.2f);
+                    drawHourglass(7, 0.4f, 1.0f);
                 glPopMatrix();
 
             glPopMatrix();
 
             SwapBuffers(hDC);
 
-            lightPosition[0] = 5 * sin(theta * 0.1);
-            lightPosition[1] = 5 * cos(theta * 0.1);
+            lightPosition[0] = 4 * sin(theta * 0.1);
+            lightPosition[1] = 4 * cos(theta * 0.1);
 
             theta += 1.0f;
             Sleep (1 + ADD_FRAMETIME);

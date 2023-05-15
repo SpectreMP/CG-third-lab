@@ -1,7 +1,17 @@
 # depslib dependency file v1.0
-1684167393 source:d:\other\cg\cg-third-lab\main.c
+1684192743 source:d:\other\cg\cg-third-lab\main.c
 	<windows.h>
 	<gl/gl.h>
 	<math.h>
 	<stdlib.h>
+	<stdio.h>
+
+1684186180 source:d:\other\cg\cg-third-lab\figures.c
+	"figures.h"
+	<GL/gl.h>
+	<stdlib.h>
+	<math.h>
+	<stdio.h>
+
+1684186204 d:\other\cg\cg-third-lab\figures.h
 
